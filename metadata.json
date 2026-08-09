@@ -1,0 +1,6 @@
+{
+  "name": "کلاس آنلاین آنلاین استاد و دانش‌آموز",
+  "description": "سامانه برگزاری کلاس آنلاین تعاملی بدون نیاز به خرید سرور به همراه تخته سیاه هوشمند، ویدیو/صدا، اشتراک‌گذاری صفحه، آزمون سریع و دستیار هوش مصنوعی",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
