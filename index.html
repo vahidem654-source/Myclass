@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>کلیپ‌ساز کتاب</title>
+<meta name="theme-color" content="#12232e">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{--ink:#12232e;--sea:#1d6f8a;--bg:#eef3f6;--sun:#f0a93b;--line:#c9d6de}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.8 Tahoma,"Vazirmatn",system-ui,sans-serif}
+header{background:var(--ink);color:#fff;padding:18px 16px}
+header h1{margin:0;font-size:22px}
+header p{margin:2px 0 0;opacity:.8;font-size:14px}
+main{max-width:860px;margin:auto;padding:12px}
+section{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;margin:12px 0}
+h2{margin:0 0 8px;font-size:17px;color:var(--sea)}
+label{display:block;margin:8px 0 2px;font-size:14px}
+input,select,textarea,button{font:inherit;width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+button{background:var(--sea);color:#fff;border:0;cursor:pointer;margin-top:8px}
+button.alt{background:var(--sun);color:var(--ink)}
+button:disabled{opacity:.5}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--sun)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:560px){.row{grid-template-columns:1fr}}
+.sc{border:1px solid var(--line);border-radius:8px;padding:8px;margin:8px 0}
+.sc .row{grid-template-columns:1fr 1fr 80px}
+#cv{width:100%;border-radius:8px;background:#000}
+#st{font-size:14px;color:var(--sea);min-height:24px}
+small{opacity:.75}
+video{width:100%;margin-top:8px;border-radius:8px}
+</style>
+</head>
+<body>
+<header><h1>کلیپ‌ساز کتاب</h1><p>صفحه‌های کتاب را انتخاب کنید و کلیپ آموزشی با صدای زن و مرد بسازید</p></header>
+<main>
+<section>
+<h2>۱. فایل کتاب و صفحه‌ها</h2>
+<label for="f">فایل PDF کتاب</label>
+<input type="file" id="f" accept="application/pdf">
+<label for="pg">شماره صفحه‌ها (مثلاً 3-5, 8)</label>
+<input id="pg" placeholder="3-5, 8" inputmode="numeric">
+<small id="info"></small>
+</section>
+<section>
+<h2>۲. روش کار</h2>
+<label for="mode">حالت</label>
+<select id="mode">
+<option value="on">آنلاین: خلاصه با هوش مصنوعی، صدای عصبی، تصویر ساخته‌شده، فایل MP4</option>
+<option value="off">آفلاین: خلاصه ساده، صدای خود دستگاه، پخش زنده</option>
+</select>
+<div id="onb">
+<label for="key">کلید API شرکت Anthropic (فقط روی همین دستگاه ذخیره می‌شود)</label>
+<input id="key" type="password" dir="ltr" placeholder="sk-ant-...">
+</div>
+<div id="offb" hidden>
+<div class="row">
+<div><label for="vf">صدای زن</label><select id="vf"></select></div>
+<div><label for="vm">صدای مرد</label><select id="vm"></select></div>
+</div>
+<small id="vn"></small>
+</div>
+<button id="b1">ساخت صحنه‌ها از صفحه‌ها</button>
+<div id="st" role="status"></div>
+</section>
+<section>
+<h2>۳. ویرایش صحنه‌ها</h2>
+<div id="list"><small>هنوز صحنه‌ای ساخته نشده.</small></div>
+</section>
+<section>
+<h2>۴. پیش‌نمایش و خروجی</h2>
+<canvas id="cv" width="1280" height="720"></canvas>
+<button id="b2" disabled>ساخت و دانلود کلیپ MP4</button>
+<button id="b3" class="alt" disabled>پخش زنده با صدای دستگاه</button>
+<small>هنگام ساخت کلیپ، صفحه را باز نگه دارید و گوشی را قفل نکنید.</small>
+<div id="out"></div>
+</section>
+</main>
+<script>
+const $=s=>document.querySelector(s),st=m=>$('#st').textContent=m;
+const C=$('#cv'),g=C.getContext('2d');
+let pdf,scenes=[];
+try{$('#key').value=localStorage.getItem('ck')||''}catch(e){}
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+/* manifest و سرویس‌ورکر برای نصب */
+try{const m={name:'کلیپ‌ساز کتاب',short_name:'کلیپ‌ساز',lang:'fa',dir:'rtl',start_url:'.',display:'standalone',background_color:'#12232e',theme_color:'#12232e',icons:[{src:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="90" fill="#12232e"/><path d="M200 150v212l180-106z" fill="#f0a93b"/></svg>'),sizes:'any',type:'image/svg+xml',purpose:'any'}]};
+const l=document.createElement('link');l.rel='manifest';l.href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'}));document.head.append(l);
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}
+
+/* انتخاب حالت و صداهای دستگاه */
+function modeUI(){const on=$('#mode').value==='on';$('#onb').hidden=!on;$('#offb').hidden=on;$('#b2').hidden=!on;$('#b3').hidden=on}
+$('#mode').onchange=modeUI;if(!navigator.onLine)$('#mode').value='off';modeUI();
+function voices(){const v=speechSynthesis.getVoices().filter(x=>/^fa/i.test(x.lang));
+['vf','vm'].forEach((id,k)=>{$('#'+id).innerHTML=v.map((x,i)=>`<option value="${i}">${x.name}</option>`).join('');if(v[k])$('#'+id).value=k});
+$('#vn').textContent=v.length?'اگر فقط یک صدا دارید، هر دو گوینده با همان صدا خوانده می‌شوند.':'صدای فارسی روی این دستگاه پیدا نشد. در تنظیمات دستگاه، بسته صوتی فارسی (Persian) را نصب کنید.';return v}
+speechSynthesis.onvoiceschanged=voices;voices();
+
+/* خواندن PDF */
+$('#f').onchange=async e=>{const f=e.target.files[0];if(!f)return;st('در حال باز کردن کتاب...');
+try{pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;$('#info').textContent='تعداد صفحه‌ها: '+pdf.numPages;st('کتاب آماده است.')}catch(x){st('خواندن فایل ممکن نشد: '+x.message)}};
+const norm=s=>s.replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+function pagesOf(s,max){const o=[];norm(s).split(/[,،\s]+/).forEach(p=>{const m=p.match(/^(\d+)(?:-(\d+))?$/);if(m)for(let i=+m[1];i<=+(m[2]||m[1]);i++)if(i>=1&&i<=max&&!o.includes(i))o.push(i)});return o}
+
+/* خلاصه ساده آفلاین */
+function offSum(t){const s=t.replace(/\s+/g,' ').split(/(?<=[.؟!?])\s/).filter(x=>x.length>20).slice(0,6),o=[];
+for(let i=0;i<s.length;i+=2)o.push({text:s.slice(i,i+2).join(' ')});return o}
+
+/* خلاصه با هوش مصنوعی */
+async function ai(t){const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':$('#key').value.trim(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+body:JSON.stringify({model:'claude-sonnet-5-5',max_tokens:3000,messages:[{role:'user',content:'متن یک صفحه از کتاب درسی را برای کلیپ آموزشی کوتاه به فارسی ساده و روان خلاصه کن. خروجی فقط یک آرایه JSON باشد، بدون هیچ توضیح دیگر: [{"who":"f یا m","text":"حداکثر دو جمله ساده برای خواندن","svg":"یک تصویر svg ساده، رنگی و مرتبط با viewBox=\\"0 0 640 360\\" یا رشته خالی"}]. بین ۳ تا ۵ صحنه بساز و گوینده را یکی در میان زن و مرد قرار بده. متن صفحه:\n'+t.slice(0,6000)}]})});
+const j=await r.json();if(!j.content)throw new Error(j.error&&j.error.message||'پاسخی از هوش مصنوعی نرسید');
+const s=j.content[0].text;return JSON.parse(s.slice(s.indexOf('['),s.lastIndexOf(']')+1))}
+
+/* ساخت صحنه‌ها */
+$('#b1').onclick=async()=>{if(!pdf)return st('اول فایل PDF را انتخاب کنید.');
+const ps=pagesOf($('#pg').value,pdf.numPages);if(!ps.length)return st('شماره صفحه‌ها را درست وارد کنید.');
+const on=$('#mode').value==='on';if(on){if(!$('#key').value.trim())return st('کلید API را وارد کنید یا حالت آفلاین را انتخاب کنید.');try{localStorage.setItem('ck',$('#key').value.trim())}catch(e){}}
+scenes=[];$('#b1').disabled=true;
+try{for(const n of ps){st('صفحه '+n+' در حال پردازش...');const p=await pdf.getPage(n),vp=p.getViewport({scale:1.6}),cv=document.createElement('canvas');cv.width=vp.width;cv.height=vp.height;
+await p.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+const t=(await p.getTextContent()).items.map(i=>i.str).join(' ');
+let sc;if(on){try{sc=await ai(t)}catch(e){st('هوش مصنوعی در دسترس نبود ('+e.message+')؛ خلاصه ساده استفاده شد.');sc=offSum(t)}}else sc=offSum(t);
+sc.forEach((s,i)=>{const o={text:s.text,who:s.who||(i%2?'m':'f'),page:cv,pw:cv.width,ph:cv.height,use:'page'};
+if(s.svg&&s.svg.trim().startsWith('<svg')){const im=new Image();im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s.svg);o.art=im;o.use='art'}scenes.push(o)})}
+st(scenes.length+' صحنه ساخته شد. متن‌ها را بخوانید و در صورت نیاز ویرایش کنید.');renderList()}
+catch(e){st('خطا: '+e.message)}$('#b1').disabled=false};
+
+function renderList(){const L=$('#list');L.innerHTML='';
+scenes.forEach((s,i)=>{const d=document.createElement('div');d.className='sc';
+d.innerHTML=`<div class="row"><select aria-label="گوینده"><option value="f">گوینده: زن</option><option value="m">گوینده: مرد</option></select><select aria-label="تصویر"><option value="page">تصویر: صفحه کتاب</option>${s.art?'<option value="art">تصویر: ساخته‌شده</option>':''}</select><button type="button">حذف</button></div><textarea rows="3" aria-label="متن صحنه"></textarea>`;
+const [a,b]=d.querySelectorAll('select'),t=d.querySelector('textarea'),x=d.querySelector('button');
+a.value=s.who;b.value=s.use;t.value=s.text;
+a.onchange=()=>s.who=a.value;b.onchange=()=>{s.use=b.value;draw(s)};t.oninput=()=>s.text=t.value;t.onfocus=()=>draw(s);
+x.onclick=()=>{scenes.splice(i,1);renderList()};L.append(d)});
+$('#b2').disabled=$('#b3').disabled=!scenes.length;if(scenes.length)setTimeout(()=>draw(scenes[0]),300)}
+
+/* رسم صحنه روی بوم */
+function wrap(t,w){g.font='36px Tahoma';const o=[];let l='';t.split(' ').forEach(x=>{const n=l?l+' '+x:x;if(g.measureText(n).width>w&&l){o.push(l);l=x}else l=n});if(l)o.push(l);return o}
+function draw(s){g.fillStyle='#12232e';g.fillRect(0,0,1280,720);
+const art=s.use==='art'&&s.art,im=art?s.art:s.page,W=art?640:s.pw,H=art?360:s.ph,k=Math.min(1200/W,470/H),w=W*k,h=H*k;
+g.fillStyle='#fff';g.fillRect(640-w/2,20,w,h);try{g.drawImage(im,640-w/2,20,w,h)}catch(e){}
+const L=wrap(s.text,1140).slice(0,4),y0=720-24-L.length*48;g.fillStyle='rgba(0,0,0,.65)';g.fillRect(0,y0-12,1280,720);
+g.fillStyle='#fff';g.direction='rtl';g.textAlign='center';g.textBaseline='top';L.forEach((l,i)=>g.fillText(l,640,y0+i*48));g.direction='ltr'}
+
+/* صدای عصبی آنلاین (Edge TTS) */
+const TK='6A5AA1D4EAFF4E9FB37E23D68491D6F4';
+async function gec(){let t=BigInt(Math.floor(Date.now()/1000)+11644473600);t-=t%300n;t*=10000000n;
+const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t.toString()+TK));return[...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('').toUpperCase()}
+async function tts(text,who){const id=crypto.randomUUID().replace(/-/g,''),v=who==='m'?'fa-IR-FaridNeural':'fa-IR-DilaraNeural';
+const ws=new WebSocket('wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken='+TK+'&ConnectionId='+id+'&Sec-MS-GEC='+await gec()+'&Sec-MS-GEC-Version=1-130.0.2849.68');
+ws.binaryType='arraybuffer';const parts=[],ts=new Date().toString();
+return new Promise((res,rej)=>{const to=setTimeout(()=>{ws.close();rej(new Error('اتصال به سرور صدا برقرار نشد'))},20000);
+ws.onerror=()=>{clearTimeout(to);rej(new Error('اتصال به سرور صدا برقرار نشد'))};
+ws.onopen=()=>{ws.send('X-Timestamp:'+ts+'\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}');
+const x=text.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+ws.send('X-RequestId:'+id+'\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:'+ts+'Z\r\nPath:ssml\r\n\r\n<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="fa-IR"><voice name="'+v+'"><prosody rate="-5%">'+x+'</prosody></voice></speak>')};
+ws.onmessage=e=>{if(typeof e.data==='string'){if(e.data.includes('Path:turn.end')){clearTimeout(to);ws.close();res(new Blob(parts).arrayBuffer())}}
+else{const n=new DataView(e.data).getUint16(0);if(new TextDecoder().decode(e.data.slice(2,2+n)).includes('Path:audio'))parts.push(e.data.slice(2+n))}}})}
+
+/* ساخت MP4 */
+$('#b2').onclick=async()=>{$('#b2').disabled=true;$('#out').innerHTML='';
+try{const ac=new AudioContext(),d=ac.createMediaStreamDestination(),bufs=[];
+for(let i=0;i<scenes.length;i++){st('ساخت صدا '+(i+1)+' از '+scenes.length+'...');bufs.push(await ac.decodeAudioData(await tts(scenes[i].text,scenes[i].who)))}
+const mt=['video/mp4','video/webm;codecs=vp9,opus','video/webm'].find(m=>MediaRecorder.isTypeSupported(m));
+const rec=new MediaRecorder(new MediaStream([...C.captureStream(25).getVideoTracks(),...d.stream.getAudioTracks()]),{mimeType:mt}),ch=[];
+rec.ondataavailable=e=>e.data.size&&ch.push(e.data);rec.start(500);
+for(let i=0;i<scenes.length;i++){st('ضبط صحنه '+(i+1)+' از '+scenes.length+'...');draw(scenes[i]);
+await new Promise(r=>{const sr=ac.createBufferSource();sr.buffer=bufs[i];sr.connect(d);sr.onended=()=>setTimeout(r,600);sr.start()})}
+const stopped=new Promise(r=>rec.onstop=r);rec.stop();await stopped;
+const ext=mt.startsWith('video/mp4')?'mp4':'webm',url=URL.createObjectURL(new Blob(ch,{type:mt.split(';')[0]}));
+$('#out').innerHTML=`<video controls src="${url}"></video><a href="${url}" download="clip.${ext}"><button type="button">دانلود clip.${ext}</button></a>`+(ext==='webm'?'<small>مرورگر شما فقط webm می‌سازد. برای mp4 از Chrome یا Safari جدید استفاده کنید.</small>':'');
+st('کلیپ آماده است.')}
+catch(e){st('خطا: '+e.message+' — اگر مشکل از سرور صدا بود، حالت آفلاین را امتحان کنید.')}$('#b2').disabled=false};
+
+/* پخش زنده آفلاین */
+$('#b3').onclick=async()=>{const v=speechSynthesis.getVoices().filter(x=>/^fa/i.test(x.lang));
+if(!v.length)return st('صدای فارسی روی این دستگاه نصب نیست.');
+for(const s of scenes){draw(s);await new Promise(r=>{const u=new SpeechSynthesisUtterance(s.text),vv=v[+$(s.who==='m'?'#vm':'#vf').value]||v[0];u.voice=vv;u.lang=vv.lang;u.onend=u.onerror=()=>setTimeout(r,500);speechSynthesis.speak(u)})}
+st('پخش تمام شد. برای ذخیره به‌صورت ویدیو می‌توانید هنگام پخش از ضبط صفحه دستگاه استفاده کنید.')};
+</script>
+</body>
+</html>
